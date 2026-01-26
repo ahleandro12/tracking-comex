@@ -203,26 +203,26 @@ if uploaded_file is not None:
                 col1, col2 = st.columns(2)
                 
                 with col1:
-                    # Descargar como Excel
-                    output = pd.ExcelWriter('temp.xlsx', engine='openpyxl')
-                    df_filtered.to_excel(output, index=False, sheet_name='Tracking')
-                    output.close()
-                    
-                    with open('temp.xlsx', 'rb') as f:
-                        st.download_button(
-                            label="📥 Descargar Excel",
-                            data=f.read(),
-                            file_name=f'tracking_comex_{datetime.now().strftime("%Y%m%d_%H%M")}.xlsx',
-                            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                        )
-                
-                with col2:
                     # Descargar como CSV
                     st.download_button(
                         label="📥 Descargar CSV",
                         data=df_filtered.to_csv(index=False).encode('utf-8'),
                         file_name=f'tracking_comex_{datetime.now().strftime("%Y%m%d_%H%M")}.csv',
                         mime='text/csv'
+                    )
+                
+                with col2:
+                    # Descargar como Excel usando el método to_excel directamente
+                    from io import BytesIO
+                    buffer = BytesIO()
+                    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                        df_filtered.to_excel(writer, index=False, sheet_name='Tracking')
+                    
+                    st.download_button(
+                        label="📥 Descargar Excel",
+                        data=buffer.getvalue(),
+                        file_name=f'tracking_comex_{datetime.now().strftime("%Y%m%d_%H%M")}.xlsx',
+                        mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                     )
                 
                 # Detalle de embarque seleccionado
@@ -290,10 +290,32 @@ else:
     
     st.dataframe(pd.DataFrame(example_data))
     
-    # Descargar ejemplo como CSV
-    st.download_button(
-        label="📥 Descargar CSV de ejemplo",
-        data=pd.DataFrame(example_data).to_csv(index=False).encode('utf-8'),
-        file_name='ejemplo_tracking.csv',
-        mime='text/csv'
-    )
+    st.markdown("---")
+    st.markdown("### 📥 Descargar plantilla")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Descargar ejemplo como Excel
+        from io import BytesIO
+        buffer = BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            pd.DataFrame(example_data).to_excel(writer, index=False, sheet_name='Tracking')
+        
+        st.download_button(
+            label="📥 Descargar plantilla Excel",
+            data=buffer.getvalue(),
+            file_name='plantilla_tracking_comex.xlsx',
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            help="Descargá esta plantilla, completala con tus datos y volvé a cargarla"
+        )
+    
+    with col2:
+        # Descargar ejemplo como CSV
+        st.download_button(
+            label="📥 Descargar plantilla CSV",
+            data=pd.DataFrame(example_data).to_csv(index=False).encode('utf-8'),
+            file_name='plantilla_tracking_comex.csv',
+            mime='text/csv',
+            help="Formato alternativo en CSV"
+        )
