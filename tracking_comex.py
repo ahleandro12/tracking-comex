@@ -197,7 +197,7 @@ if uploaded_file is not None:
                     subset=['Estado']
                 )
                 
-                st.dataframe(styled_df, width=None, height=400)
+                st.dataframe(styled_df, height=400)
                 
                 # Botones de descarga
                 col1, col2 = st.columns(2)
@@ -288,7 +288,7 @@ else:
         'Puerto Destino': ['Buenos Aires', 'Buenos Aires', 'Buenos Aires']
     }
     
-    st.dataframe(pd.DataFrame(example_data), width=None)
+    st.dataframe(pd.DataFrame(example_data))
     
     # Descargar ejemplo como Excel
     output = pd.ExcelWriter('ejemplo_tracking.xlsx', engine='openpyxl')
