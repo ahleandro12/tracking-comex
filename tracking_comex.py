@@ -290,15 +290,10 @@ else:
     
     st.dataframe(pd.DataFrame(example_data))
     
-    # Descargar ejemplo como Excel
-    output = pd.ExcelWriter('ejemplo_tracking.xlsx', engine='openpyxl')
-    pd.DataFrame(example_data).to_excel(output, index=False, sheet_name='Tracking')
-    output.close()
-    
-    with open('ejemplo_tracking.xlsx', 'rb') as f:
-        st.download_button(
-            label="📥 Descargar Excel de ejemplo",
-            data=f.read(),
-            file_name='ejemplo_tracking.xlsx',
-            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
+    # Descargar ejemplo como CSV
+    st.download_button(
+        label="📥 Descargar CSV de ejemplo",
+        data=pd.DataFrame(example_data).to_csv(index=False).encode('utf-8'),
+        file_name='ejemplo_tracking.csv',
+        mime='text/csv'
+    )
