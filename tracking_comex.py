@@ -33,10 +33,14 @@ def detect_carrier(container):
 # Sidebar para cargar archivo
 with st.sidebar:
     st.header("📁 Cargar Datos")
-    uploaded_file = st.file_uploader("Subir archivo CSV", type=['csv'])
+    uploaded_file = st.file_uploader(
+        "Subir archivo Excel o CSV", 
+        type=['xlsx', 'xls', 'csv'],
+        help="Podés cargar archivos .xlsx, .xls o .csv"
+    )
     
     st.markdown("---")
-    st.markdown("### 📋 Formato del CSV")
+    st.markdown("### 📋 Formato del archivo")
     st.markdown("""
     **Columnas requeridas:**
     - `Forwarder`
@@ -46,21 +50,33 @@ with st.sidebar:
     **Columnas opcionales:**
     - `Contenedor`
     - `Carrier`
-    - `Estado`
-    - `ETD`
-    - `ETA`
+    - `Estado` (Loaded, In Transit, Arrived, Delivered, Pendiente)
+    - `ETD` (Fecha de salida)
+    - `ETA` (Fecha estimada de llegada)
     - `Puerto Origen`
     - `Puerto Destino`
+    - `Peso KG`
+    - `Descripcion`
     - `Observaciones`
     """)
+    
+    st.markdown("---")
+    st.info("💡 **Tip:** Trabajá directo en Excel y cargá el archivo aquí. ¡No hace falta exportar a CSV!")
 
-# Procesar archivo CSV
+# Procesar archivo
 if uploaded_file is not None:
     try:
-        # Leer CSV
-        df = pd.read_csv(uploaded_file)
+        # Detectar tipo de archivo y leer
+        file_extension = uploaded_file.name.split('.')[-1].lower()
         
-        # Normalizar nombres de columnas (por si tienen espacios o mayúsculas)
+        if file_extension == 'csv':
+            df = pd.read_csv(uploaded_file)
+            st.success(f"✅ Archivo CSV cargado: **{uploaded_file.name}**")
+        else:  # xlsx o xls
+            df = pd.read_excel(uploaded_file)
+            st.success(f"✅ Archivo Excel cargado: **{uploaded_file.name}**")
+        
+        # Normalizar nombres de columnas
         df.columns = df.columns.str.strip()
         
         # Detectar carrier automáticamente si no existe
@@ -76,6 +92,7 @@ if uploaded_file is not None:
         
         if missing_cols:
             st.error(f"❌ Faltan columnas requeridas: {', '.join(missing_cols)}")
+            st.info("💡 Asegurate de que tu Excel tenga columnas con los nombres: Forwarder, Buque, BL")
         else:
             # Rellenar columnas opcionales si no existen
             optional_cols = {
@@ -85,6 +102,8 @@ if uploaded_file is not None:
                 'ETA': '',
                 'Puerto Origen': '',
                 'Puerto Destino': '',
+                'Peso KG': '',
+                'Descripcion': '',
                 'Observaciones': ''
             }
             
@@ -93,6 +112,7 @@ if uploaded_file is not None:
                     df[col] = default_val
             
             # Filtros
+            st.markdown("---")
             col1, col2, col3 = st.columns([2, 2, 2])
             
             with col1:
@@ -103,7 +123,7 @@ if uploaded_file is not None:
                 estado_filter = st.selectbox("📊 Filtrar por Estado", estados_unicos)
             
             with col3:
-                carriers_unicos = ['Todos'] + sorted(df['Carrier'].dropna().unique().tolist())
+                carriers_unicos = ['Todos'] + sorted([c for c in df['Carrier'].dropna().unique().tolist() if c])
                 carrier_filter = st.selectbox("🚢 Filtrar por Carrier", carriers_unicos)
             
             # Aplicar filtros
@@ -111,10 +131,10 @@ if uploaded_file is not None:
             
             if search_term:
                 mask = (
-                    df_filtered['Forwarder'].str.contains(search_term, case=False, na=False) |
-                    df_filtered['BL'].str.contains(search_term, case=False, na=False) |
-                    df_filtered['Contenedor'].str.contains(search_term, case=False, na=False) |
-                    df_filtered['Buque'].str.contains(search_term, case=False, na=False)
+                    df_filtered['Forwarder'].astype(str).str.contains(search_term, case=False, na=False) |
+                    df_filtered['BL'].astype(str).str.contains(search_term, case=False, na=False) |
+                    df_filtered['Contenedor'].astype(str).str.contains(search_term, case=False, na=False) |
+                    df_filtered['Buque'].astype(str).str.contains(search_term, case=False, na=False)
                 )
                 df_filtered = df_filtered[mask]
             
@@ -177,15 +197,33 @@ if uploaded_file is not None:
                     subset=['Estado']
                 )
                 
-                st.dataframe(styled_df, use_container_width=True, height=400)
+                st.dataframe(styled_df, width=None, height=400)
                 
-                # Botón de descarga
-                st.download_button(
-                    label="📥 Descargar resultados filtrados (CSV)",
-                    data=df_filtered.to_csv(index=False).encode('utf-8'),
-                    file_name=f'tracking_comex_{datetime.now().strftime("%Y%m%d_%H%M")}.csv',
-                    mime='text/csv'
-                )
+                # Botones de descarga
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    # Descargar como Excel
+                    output = pd.ExcelWriter('temp.xlsx', engine='openpyxl')
+                    df_filtered.to_excel(output, index=False, sheet_name='Tracking')
+                    output.close()
+                    
+                    with open('temp.xlsx', 'rb') as f:
+                        st.download_button(
+                            label="📥 Descargar Excel",
+                            data=f.read(),
+                            file_name=f'tracking_comex_{datetime.now().strftime("%Y%m%d_%H%M")}.xlsx',
+                            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                        )
+                
+                with col2:
+                    # Descargar como CSV
+                    st.download_button(
+                        label="📥 Descargar CSV",
+                        data=df_filtered.to_csv(index=False).encode('utf-8'),
+                        file_name=f'tracking_comex_{datetime.now().strftime("%Y%m%d_%H%M")}.csv',
+                        mime='text/csv'
+                    )
                 
                 # Detalle de embarque seleccionado
                 st.markdown("---")
@@ -213,23 +251,30 @@ if uploaded_file is not None:
                         st.markdown(f"**Puerto Origen:** {shipment['Puerto Origen'] or 'N/A'}")
                         st.markdown(f"**Puerto Destino:** {shipment['Puerto Destino'] or 'N/A'}")
                     
+                    if shipment['Peso KG']:
+                        st.markdown(f"**⚖️ Peso:** {shipment['Peso KG']} KG")
+                    
+                    if shipment['Descripcion']:
+                        st.markdown(f"**📝 Descripción:** {shipment['Descripcion']}")
+                    
                     if shipment['Observaciones']:
                         st.markdown("---")
-                        st.markdown(f"**📝 Observaciones:** {shipment['Observaciones']}")
+                        st.markdown(f"**📌 Observaciones:** {shipment['Observaciones']}")
             else:
                 st.info("ℹ️ No se encontraron embarques con los filtros aplicados")
                 
     except Exception as e:
         st.error(f"❌ Error al procesar el archivo: {str(e)}")
-        st.info("Asegurate de que el archivo CSV esté correctamente formateado")
+        st.info("💡 Asegurate de que el archivo Excel esté correctamente formateado y no tenga celdas fusionadas en los encabezados")
 
 else:
     # Mensaje cuando no hay archivo cargado
-    st.info("👈 Subí un archivo CSV desde el panel lateral para comenzar")
+    st.info("👈 Subí un archivo Excel o CSV desde el panel lateral para comenzar")
     
-    # Mostrar ejemplo de CSV
+    # Mostrar ejemplo
     st.markdown("---")
-    st.subheader("📄 Ejemplo de CSV")
+    st.subheader("📄 Ejemplo de datos")
+    st.markdown("Tu Excel debería verse algo así:")
     
     example_data = {
         'Forwarder': ['Craft ARG', 'Craft ARG', 'Craft ARG'],
@@ -243,11 +288,17 @@ else:
         'Puerto Destino': ['Buenos Aires', 'Buenos Aires', 'Buenos Aires']
     }
     
-    st.dataframe(pd.DataFrame(example_data), use_container_width=True)
+    st.dataframe(pd.DataFrame(example_data), width=None)
     
-    st.download_button(
-        label="📥 Descargar CSV de ejemplo",
-        data=pd.DataFrame(example_data).to_csv(index=False).encode('utf-8'),
-        file_name='ejemplo_tracking.csv',
-        mime='text/csv'
-    )
+    # Descargar ejemplo como Excel
+    output = pd.ExcelWriter('ejemplo_tracking.xlsx', engine='openpyxl')
+    pd.DataFrame(example_data).to_excel(output, index=False, sheet_name='Tracking')
+    output.close()
+    
+    with open('ejemplo_tracking.xlsx', 'rb') as f:
+        st.download_button(
+            label="📥 Descargar Excel de ejemplo",
+            data=f.read(),
+            file_name='ejemplo_tracking.xlsx',
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
