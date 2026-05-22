@@ -253,8 +253,7 @@ if len(alertas) > 0:
 
             with st.container():
                 obs_val = row.get("Observaciones", "") or ""
-                obs_html = f'<div class="alert-obs">⚠ {obs_val}</div>' if obs_val else ""
-                contactado_html = "· ✅ Forwarder contactado" if contacted else ""
+                contactado_txt = "✅ Forwarder contactado" if contacted else ""
                 st.markdown(f"""
                 <div class="alert-card">
                     <div class="alert-icon">🚨</div>
@@ -265,11 +264,13 @@ if len(alertas) > 0:
                             {row.get('Descripcion','') or row['Buque']} · 
                             {row.get('Puerto Origen','?')} → {row.get('Puerto Destino','?')} · 
                             ETA: {eta_str} · <span class="alert-days">{dias_over} días de demora</span>
-                            {contactado_html}
                         </div>
-                        {obs_html}
                     </div>
                 </div>""", unsafe_allow_html=True)
+                if contactado_txt:
+                    st.caption(f"✅ {contactado_txt}")
+                if obs_val:
+                    st.caption(f"⚠️ {obs_val}")
 
                 ac1, ac2, ac3, ac4 = st.columns([2,2,2,1])
 
