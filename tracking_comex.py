@@ -243,59 +243,58 @@ with c2: st.markdown(f"<div style='text-align:right;color:#2d4260;padding-top:14
 alertas = df[(df["ETA Vencida"]==True) & (~df["BL"].isin(st.session_state.resolved))]
 
 if len(alertas) > 0:
-    st.markdown(f"<div class='sec'>⚠️ Alertas activas — {len(alertas)} embarque{'s' if len(alertas)!=1 else ''} con ETA vencida</div>", unsafe_allow_html=True)
+    with st.expander(f"⚠️ Alertas activas — {len(alertas)} embarque{'s' if len(alertas)!=1 else ''} con ETA vencida", expanded=False):
+        for _, row in alertas.iterrows():
+            bl = row['BL']
+            eta_dt = pd.to_datetime(row['ETA'], errors='coerce')
+            eta_str = eta_dt.strftime('%d/%m') if pd.notna(eta_dt) else '?'
+            dias_over = (TODAY - eta_dt).days if pd.notna(eta_dt) else '?'
+            contacted = bl in st.session_state.contacted
 
-    for _, row in alertas.iterrows():
-        bl = row['BL']
-        eta_dt = pd.to_datetime(row['ETA'], errors='coerce')
-        eta_str = eta_dt.strftime('%d/%m') if pd.notna(eta_dt) else '?'
-        dias_over = (TODAY - eta_dt).days if pd.notna(eta_dt) else '?'
-        contacted = bl in st.session_state.contacted
-
-        with st.container():
-            st.markdown(f"""
-            <div class="alert-card">
-                <div class="alert-icon">🚨</div>
-                <div class="alert-body">
-                    <div class="alert-title">ETA Vencida · {row['Forwarder']} · {row.get('Carrier','')}</div>
-                    <div class="alert-bl">{bl}</div>
-                    <div class="alert-detail">
-                        {row.get('Descripcion','') or row['Buque']} · 
-                        {row.get('Puerto Origen','?')} → {row.get('Puerto Destino','?')} · 
-                        ETA: {eta_str} · <span class="alert-days">{dias_over} días de demora</span>
-                        {"· ✅ Forwarder contactado" if contacted else ""}
+            with st.container():
+                st.markdown(f"""
+                <div class="alert-card">
+                    <div class="alert-icon">🚨</div>
+                    <div class="alert-body">
+                        <div class="alert-title">ETA Vencida · {row['Forwarder']} · {row.get('Carrier','')}</div>
+                        <div class="alert-bl">{bl}</div>
+                        <div class="alert-detail">
+                            {row.get('Descripcion','') or row['Buque']} · 
+                            {row.get('Puerto Origen','?')} → {row.get('Puerto Destino','?')} · 
+                            ETA: {eta_str} · <span class="alert-days">{dias_over} días de demora</span>
+                            {"· ✅ Forwarder contactado" if contacted else ""}
+                        </div>
+                        {f'<div class="alert-obs">⚠ {row["Observaciones"]}</div>' if row.get("Observaciones") else ""}
                     </div>
-                    {f'<div class="alert-obs">⚠ {row["Observaciones"]}</div>' if row.get("Observaciones") else ""}
-                </div>
-            </div>""", unsafe_allow_html=True)
+                </div>""", unsafe_allow_html=True)
 
-            ac1, ac2, ac3, ac4 = st.columns([2,2,2,1])
+                ac1, ac2, ac3, ac4 = st.columns([2,2,2,1])
 
-            with ac1:
-                if st.button(f"✅ Confirmar arribo", key=f"arr_{bl}"):
-                    st.session_state.estado_overrides[bl] = 'Arrived'
-                    st.session_state.resolved.add(bl)
-                    st.rerun()
+                with ac1:
+                    if st.button(f"✅ Confirmar arribo", key=f"arr_{bl}"):
+                        st.session_state.estado_overrides[bl] = 'Arrived'
+                        st.session_state.resolved.add(bl)
+                        st.rerun()
 
-            with ac2:
-                label_contact = "📞 Forwarder contactado" if contacted else "📞 Marcar contactado"
-                if st.button(label_contact, key=f"cnt_{bl}"):
-                    st.session_state.contacted.add(bl)
-                    st.rerun()
+                with ac2:
+                    label_contact = "📞 Forwarder contactado" if contacted else "📞 Marcar contactado"
+                    if st.button(label_contact, key=f"cnt_{bl}"):
+                        st.session_state.contacted.add(bl)
+                        st.rerun()
 
-            with ac3:
-                if st.button(f"🔕 Desestimar alerta", key=f"dis_{bl}"):
-                    st.session_state.resolved.add(bl)
-                    st.rerun()
+                with ac3:
+                    if st.button(f"🔕 Desestimar alerta", key=f"dis_{bl}"):
+                        st.session_state.resolved.add(bl)
+                        st.rerun()
 
-            with ac4:
-                nota_key = f"nota_{bl}"
-                nota = st.text_input("Nota rápida", key=nota_key,
-                    value=st.session_state.notas.get(bl,''),
-                    placeholder="Agregar nota...", label_visibility="collapsed")
-                if nota: st.session_state.notas[bl] = nota
+                with ac4:
+                    nota_key = f"nota_{bl}"
+                    nota = st.text_input("Nota rápida", key=nota_key,
+                        value=st.session_state.notas.get(bl,''),
+                        placeholder="Agregar nota...", label_visibility="collapsed")
+                    if nota: st.session_state.notas[bl] = nota
 
-        st.markdown("<hr style='border:none;border-top:1px solid #0d1627;margin:4px 0'>", unsafe_allow_html=True)
+            st.markdown("<hr style='border:none;border-top:1px solid #0d1627;margin:4px 0'>", unsafe_allow_html=True)
 
 # ── KPIs ─────────────────────────────────────────────────────────────────────
 total = len(df)
