@@ -357,8 +357,8 @@ def color_dias(val):
         return ''
 
 styled = df_show.style\
-    .applymap(color_estado, subset=['Estado'])\
-    .applymap(color_dias, subset=['Días en Tránsito'] if 'Días en Tránsito' in df_show.columns else [])\
+    .map(color_estado, subset=['Estado'])\
+    .map(color_dias, subset=['Días en Tránsito'] if 'Días en Tránsito' in df_show.columns else [])\
     .set_properties(**{'font-size': '13px'})
 
 st.dataframe(styled, height=380, use_container_width=True)
