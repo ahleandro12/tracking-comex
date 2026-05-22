@@ -202,6 +202,7 @@ for bl, estado in st.session_state.estado_overrides.items():
     df.loc[df['BL']==bl, 'Estado'] = estado
 
 df["Días en Tránsito"] = df["ETD"].apply(dias_transito)
+df["Días en Tránsito"] = pd.to_numeric(df["Días en Tránsito"], errors="coerce").astype("Int64")
 df["ETA Vencida"] = df.apply(is_eta_vencida, axis=1)
 df["Estado Visual"] = df.apply(lambda r: "ETA Vencida" if r["ETA Vencida"] else r["Estado"], axis=1)
 
